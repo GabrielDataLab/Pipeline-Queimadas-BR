@@ -1,2 +1,2 @@
 <h1> Pipeline de monitoramento de focos de incêndio no Brasil usando dados do INPE </h1>
-<p> O projeto segue uma arquitetura ETL (Extract, Transform, Load), automatizando o fluxo de ingestão, tratamento e persistência dos dados para análise posterior </p>
+<p> O projeto segue uma arquitetura ETL (Extract, Transform, Load), automatizando o fluxo de ingestão, tratamento e persistência dos dados para análise posterior </p>s

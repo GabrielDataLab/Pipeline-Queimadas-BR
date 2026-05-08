@@ -21,7 +21,7 @@ services:
 
   airflow:
     image: apache/airflow:2.8.1
-    command: standalone
+    command: bash -c "airflow db init && airflow standalone"
     ports:
       - 8080:8080
     container_name: airflow
@@ -47,7 +47,7 @@ services:
       - Pipeline_network
     volumes:
       - ./src:/app/src
-    command: tail -f /dev/nukll
+    command: tail -f /dev/null
 
 networks:
   Pipeline_network:

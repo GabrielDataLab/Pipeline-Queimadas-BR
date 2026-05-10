@@ -3,6 +3,12 @@ import requests
 import logging
 from pathlib import Path 
 import json
+import boto3
+import os
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
@@ -34,6 +40,28 @@ def extrair_todos_municipios() -> list:
         lista_mun_completa.extend(extrair_municipios_por_estado(e))
     return lista_mun_completa
 
+
+def upload_para_s3(caminho_local: Path) -> str:
+    agora = datetime.now()
+    dia = agora.strftime("%d")
+    mes = agora.strftime("%m")
+    ano = agora.strftime("%Y")
+    s3 = boto3.client(
+        service_name="s3",
+        region_name="us-east-1",
+    )
+    bucket_name=os.getenv("AWS_BUCKET_NAME")
+    chave_s3 = f"raw/municipios/ano={ano}/mes={mes}/dia={dia}/municipios_brasil.json"
+    s3.upload_file(
+        str(caminho_local),
+        bucket_name,
+        chave_s3
+    )
+    logging.info(f"Upload realizado com sucesso em: s3://{bucket_name}/{chave_s3}")
+    return chave_s3
+                 
+
+
 if __name__ == "__main__":
     resultado = extrair_todos_municipios()
     pasta = Path(__file__).parent.parent / "data" / "raw"
@@ -46,3 +74,5 @@ if __name__ == "__main__":
                    encoding="utf-8"
     )
     logging.info(f"{len(resultado)} Municípios extraídos")
+    caminho_s3 = upload_para_s3(arquivo)
+    logging.info(f"Arquivo Disponivel em: {caminho_s3}")

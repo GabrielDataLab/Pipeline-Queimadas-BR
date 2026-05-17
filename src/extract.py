@@ -1,66 +1,64 @@
-# Fazer a extração dos dados do IBGE
 import requests
 import logging
-from pathlib import Path 
 import json
-import boto3
-import os
+from pathlib import Path
 from datetime import datetime
+import os
+import boto3
 from dotenv import load_dotenv
 
 load_dotenv()
-
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
-
-logger = logging.getLogger(__name__)
 
 
 ESTADOS = ["AC","AL","AM","AP","BA","CE","DF","ES","GO","MA",
            "MG","MS","MT","PA","PB","PE","PI","PR","RJ","RN",
            "RO","RR","RS","SC","SE","SP","TO"]
 
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+
 
 def extrair_municipios_por_estado(sigla_uf:str) -> list:
+    logging.info("Extração iniciada")
     url = f"https://servicodados.ibge.gov.br/api/v1/localidades/estados/{sigla_uf}/municipios"
-    logging.info("Iniciando extração")
-    response= requests.get(url)
+    response = requests.get(url)
     if response.status_code == 200:
         dados = response.json()
-        logging.info("API obtida com sucesso")
-        logging.info(f"API funcionando e {len(dados)} registros encontrados")
+        logging.info(f"Extração realizada com sucesso! {len(dados)} Registros encontrados")
         return dados
     else:
-        raise Exception(f"Erro inesperado na API, status {response.status_code}")
+        raise Exception(f"Erro inesperado na API, status: {response.status_code}")
     
 
-def extrair_todos_municipios() -> list:
-    lista_mun_completa = []
-    for e in ESTADOS:
-        lista_mun_completa.extend(extrair_municipios_por_estado(e))
-    return lista_mun_completa
-
-
-def upload_para_s3(caminho_local: Path) -> str:
+def upload_para_s3(caminho_arquivo_local:Path) -> str:
+    
     agora = datetime.now()
     dia = agora.strftime("%d")
     mes = agora.strftime("%m")
     ano = agora.strftime("%Y")
+    
     s3 = boto3.client(
-        service_name="s3",
-        region_name="us-east-1",
+        "s3",
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        region_name="us-east-1"
     )
-    bucket_name=os.getenv("AWS_BUCKET_NAME")
-    chave_s3 = f"raw/municipios/ano={ano}/mes={mes}/dia={dia}/municipios_brasil.json"
+    bucket_name = os.getenv("AWS_BUCKET_NAME")
+    caminho_s3 = f"raw/municipios/ano={ano}/mes={mes}/dia={dia}/municipios_brasil.json"
     s3.upload_file(
-        str(caminho_local),
+        str(caminho_arquivo_local),
         bucket_name,
-        chave_s3
+        caminho_s3
     )
-    logging.info(f"Upload realizado com sucesso em: s3://{bucket_name}/{chave_s3}")
-    return chave_s3
-                 
+    logging.info(f"Upload realizado com sucesso!")
+    return caminho_s3
 
+
+def extrair_todos_municipios() -> list:
+    lista_municipios_completa = []
+    for e in ESTADOS:
+        lista_municipios_completa.extend(extrair_municipios_por_estado(e))
+    return lista_municipios_completa
 
 if __name__ == "__main__":
     resultado = extrair_todos_municipios()
@@ -68,11 +66,11 @@ if __name__ == "__main__":
     pasta.mkdir(exist_ok=True, parents=True)
     arquivo = pasta / "municipios_brasil.json"
     arquivo.write_text(
-        json.dumps(resultado, 
-                   indent=4, 
-                   ensure_ascii=False),
-                   encoding="utf-8"
-    )
-    logging.info(f"{len(resultado)} Municípios extraídos")
+        json.dumps(
+            resultado,
+            indent=4,
+            ensure_ascii=False,), 
+            encoding="utf-8")
+    logging.info(f"Extração finalizada, {len(resultado)} Municipios extraídos")
     caminho_s3 = upload_para_s3(arquivo)
-    logging.info(f"Arquivo Disponivel em: {caminho_s3}")
+    logging.info(f"Arquivo disponivel em: {caminho_s3}")

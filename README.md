@@ -90,7 +90,6 @@ pipeline-ibge-br/
 │   └── load.py                 # Criação de tabela + upsert PostgreSQL
 ├── .env.example                # Template de variáveis de ambiente
 ├── docker-compose.yml          # Airflow + PostgreSQL
-├── Dockerfile
 └── requirements.txt
 ```
 
